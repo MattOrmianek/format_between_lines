@@ -1,10 +1,11 @@
 """Formats and lints specific lines in a Python file."""
 
-# pylint: disable=unspecified-encoding, broad-exception-caught
+# pylint: disable=unspecified-encoding, broad-exception-caught, inconsistent-return-statements
 import logging
 import subprocess
 import argparse
 from logging.handlers import RotatingFileHandler
+
 handler = RotatingFileHandler("backend.log", maxBytes=50 * 1024 * 1024, backupCount=50)  # 50 MB
 handler.setFormatter(
     logging.Formatter(
@@ -19,6 +20,7 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 logger = logging.getLogger(__name__)
 
+
 def extract_lines(file_path, start_line, end_line):
     """Extracts the lines between the given start and end line numbers."""
     try:
@@ -27,6 +29,7 @@ def extract_lines(file_path, start_line, end_line):
         return lines[start_line - 1 : end_line]
     except Exception as error:
         logging.error("Error occurred while extracting lines: %s", error)
+
 
 def format_with_black(code):
     """Formats the given code using black."""
@@ -42,6 +45,8 @@ def format_with_black(code):
     except subprocess.CalledProcessError as error:
         logging.error("Error occurred while formatting code: %s", error)
         raise
+
+
 def lint_with_pylint(code):
     """Lints the given code using pylint."""
     with open("temp_code.py", "w") as temp_file:
@@ -52,14 +57,14 @@ def lint_with_pylint(code):
             [
                 "pylint",
                 "temp_code.py",
-                "--disable=missing-module-docstring,missing-function-docstring,invalid-name"
+                "--disable=missing-module-docstring,missing-function-docstring,invalid-name",
             ],
             check=False,  # Do not raise an exception for non-zero exit
             capture_output=True,
-            text=True
+            text=True,
         )
-        logging.info("%s",result.stdout)  # Print pylint output
-        logging.info("%s",result.stderr)  # Print any errors
+        logging.info("%s", result.stdout)  # Print pylint output
+        logging.info("%s", result.stderr)  # Print any errors
 
         if result.returncode != 0:
             logging.error("Pylint found issues. Exit code: %s", result.returncode)
@@ -69,6 +74,7 @@ def lint_with_pylint(code):
         logging.error("An error occurred while running pylint: %s", error)
     finally:
         subprocess.run(["rm", "temp_code.py"], check=True)
+
 
 def replace_lines(file_path, start_line, end_line, new_code):
     """Replaces the lines between the given start and end line numbers with the given new code."""
@@ -82,6 +88,8 @@ def replace_lines(file_path, start_line, end_line, new_code):
             file.writelines(lines)
     except Exception as error:
         logging.error("Error occurred while replacing lines: %s", error)
+
+
 def main(file_path, start_line, end_line):
     """Main function that formats and lints specific lines in a Python file."""
     try:
@@ -92,8 +100,10 @@ def main(file_path, start_line, end_line):
     # Attempt to parse the code to ensure it's valid Python
     try:
         compile(code_str, "<string>", "exec")
-    except SyntaxError as e:
-        print(f"Code between lines {start_line} and {end_line} is incomplete or invalid: {e}")
+    except SyntaxError as error:
+        logging.error(
+            "Code between lines %s and %s is incomplete or invalid: %s", start_line, end_line, error
+        )
         return
     try:
         # If the code is complete, format and lint it
@@ -102,6 +112,7 @@ def main(file_path, start_line, end_line):
         replace_lines(file_path, start_line, end_line, formatted_code.splitlines(keepends=True))
     except Exception as error:
         logging.error("Error occurred while formatting and linting code: %s", error)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Format and lint specific lines in a Python file.")
